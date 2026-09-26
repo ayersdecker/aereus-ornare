@@ -114,7 +114,7 @@ jobs:
           fs.writeFileSync(credentialsPath, JSON.stringify(serviceAccount), { mode: 0o600 })
           fs.appendFileSync(process.env.GITHUB_ENV, `GOOGLE_APPLICATION_CREDENTIALS=${credentialsPath}\n`)
           fs.appendFileSync(process.env.GITHUB_ENV, `FIREBASE_PROJECT_ID=${config.firebaseProjectId}\n`)
-          console.log('Deployment config validated.')
+          console.log(`Deployment config validated for ${serviceAccount.client_email}.`)
           NODE
 
       - name: Install frontend dependencies
