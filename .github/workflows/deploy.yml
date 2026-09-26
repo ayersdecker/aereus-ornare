@@ -29,6 +29,7 @@ jobs:
           DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
         run: |
           node <<'NODE'
+          const crypto = require('node:crypto')
           const fs = require('node:fs')
           const path = require('node:path')
 
@@ -71,6 +72,11 @@ jobs:
           if (serviceAccount.type !== 'service_account' ||
               !serviceAccount.private_key.includes('BEGIN PRIVATE KEY')) {
             throw new Error('DEPLOY_CONFIG.serviceAccount must be a Google service-account key JSON object.')
+          }
+          try {
+            crypto.createPrivateKey(serviceAccount.private_key)
+          } catch {
+            throw new Error('DEPLOY_CONFIG.serviceAccount.private_key is not a valid PEM key. Paste the actual private_key from the downloaded service-account JSON; do not leave template text in it.')
           }
           if (web.projectId !== config.firebaseProjectId) {
             throw new Error('webConfig.projectId must match firebaseProjectId.')
