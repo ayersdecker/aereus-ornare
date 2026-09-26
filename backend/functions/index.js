@@ -4,15 +4,15 @@ const express = require('express')
 const admin = require('firebase-admin')
 const { onRequest } = require('firebase-functions/v2/https')
 
-const agentsRouter = require('./agents')
-const messagesRouter = require('./messages')
-const directivesRouter = require('./directives')
-
 dotenv.config()
 
 if (!admin.apps.length) {
   admin.initializeApp()
 }
+
+const agentsRouter = require('./agents')
+const messagesRouter = require('./messages')
+const directivesRouter = require('./directives')
 
 const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
   .split(',')
