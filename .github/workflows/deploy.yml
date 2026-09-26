@@ -18,11 +18,81 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
           cache: npm
           cache-dependency-path: |
             frontend/package-lock.json
             backend/functions/package-lock.json
+
+      - name: Configure deployment from DEPLOY_CONFIG
+        env:
+          DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+
+          let config
+          try {
+            config = JSON.parse(process.env.DEPLOY_CONFIG || '')
+          } catch {
+            throw new Error('DEPLOY_CONFIG must contain valid JSON.')
+          }
+
+          const web = config.webConfig || {}
+          const required = {
+            firebaseProjectId: config.firebaseProjectId,
+            firebaseToken: config.firebaseToken,
+            apiBaseUrl: config.apiBaseUrl,
+            apiKey: web.apiKey,
+            authDomain: web.authDomain,
+            projectId: web.projectId,
+            storageBucket: web.storageBucket,
+            messagingSenderId: web.messagingSenderId,
+            appId: web.appId,
+            measurementId: web.measurementId,
+          }
+
+          for (const [name, value] of Object.entries(required)) {
+            if (typeof value !== 'string' || !value.trim()) {
+              throw new Error(`DEPLOY_CONFIG is missing ${name}.`)
+            }
+            if (value.includes('\n') || value.includes('\r')) {
+              throw new Error(`DEPLOY_CONFIG ${name} must be a single line.`)
+            }
+          }
+
+          if (web.projectId !== config.firebaseProjectId) {
+            throw new Error('webConfig.projectId must match firebaseProjectId.')
+          }
+          if (!Array.isArray(config.allowedOrigins) || config.allowedOrigins.length === 0 ||
+              config.allowedOrigins.some((origin) => typeof origin !== 'string' || !origin.trim())) {
+            throw new Error('DEPLOY_CONFIG.allowedOrigins must be a non-empty array of origins.')
+          }
+
+          const frontendEnv = {
+            VITE_FIREBASE_API_KEY: web.apiKey,
+            VITE_FIREBASE_AUTH_DOMAIN: web.authDomain,
+            VITE_FIREBASE_PROJECT_ID: web.projectId,
+            VITE_FIREBASE_STORAGE_BUCKET: web.storageBucket,
+            VITE_FIREBASE_MESSAGING_SENDER_ID: web.messagingSenderId,
+            VITE_FIREBASE_APP_ID: web.appId,
+            VITE_FIREBASE_MEASUREMENT_ID: web.measurementId,
+            VITE_API_BASE_URL: config.apiBaseUrl,
+          }
+
+          fs.writeFileSync(
+            'frontend/.env.production',
+            Object.entries(frontendEnv)
+              .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+              .join('\n') + '\n',
+          )
+          fs.writeFileSync(
+            'backend/functions/.env',
+            `CORS_ALLOWED_ORIGINS=${JSON.stringify(config.allowedOrigins.join(','))}\n`,
+          )
+          fs.appendFileSync(process.env.GITHUB_ENV, `FIREBASE_PROJECT_ID=${config.firebaseProjectId}\n`)
+          console.log('Deployment config validated.')
+          NODE
 
       - name: Install frontend dependencies
         run: npm ci
@@ -43,5 +113,8 @@ jobs:
         working-directory: backend/functions
 
       - name: Deploy Firebase backend
-        if: ${{ secrets.FIREBASE_TOKEN != '' }}
-        run: npx firebase-tools deploy --token "${{ secrets.FIREBASE_TOKEN }}" --only functions,firestore
+        env:
+          DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+        run: |
+          FIREBASE_TOKEN="$(node -p 'JSON.parse(process.env.DEPLOY_CONFIG).firebaseToken')"
+          npx firebase-tools deploy --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --only functions,firestore
