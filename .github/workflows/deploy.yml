@@ -30,6 +30,7 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('node:fs')
+          const path = require('node:path')
 
           let config
           try {
@@ -37,11 +38,14 @@ jobs:
           } catch {
             throw new Error('DEPLOY_CONFIG must contain valid JSON.')
           }
+          if (!config || typeof config !== 'object' || Array.isArray(config)) {
+            throw new Error('DEPLOY_CONFIG must be a JSON object.')
+          }
 
           const web = config.webConfig || {}
+          const serviceAccount = config.serviceAccount || {}
           const required = {
             firebaseProjectId: config.firebaseProjectId,
-            firebaseToken: config.firebaseToken,
             apiBaseUrl: config.apiBaseUrl,
             apiKey: web.apiKey,
             authDomain: web.authDomain,
@@ -50,22 +54,32 @@ jobs:
             messagingSenderId: web.messagingSenderId,
             appId: web.appId,
             measurementId: web.measurementId,
+            serviceAccountProjectId: serviceAccount.project_id,
+            serviceAccountEmail: serviceAccount.client_email,
+            serviceAccountPrivateKey: serviceAccount.private_key,
           }
 
           for (const [name, value] of Object.entries(required)) {
             if (typeof value !== 'string' || !value.trim()) {
               throw new Error(`DEPLOY_CONFIG is missing ${name}.`)
             }
-            if (value.includes('\n') || value.includes('\r')) {
+            if (name !== 'serviceAccountPrivateKey' && (value.includes('\n') || value.includes('\r'))) {
               throw new Error(`DEPLOY_CONFIG ${name} must be a single line.`)
             }
           }
 
+          if (serviceAccount.type !== 'service_account' ||
+              !serviceAccount.private_key.includes('BEGIN PRIVATE KEY')) {
+            throw new Error('DEPLOY_CONFIG.serviceAccount must be a Google service-account key JSON object.')
+          }
           if (web.projectId !== config.firebaseProjectId) {
             throw new Error('webConfig.projectId must match firebaseProjectId.')
           }
+          if (serviceAccount.project_id !== config.firebaseProjectId) {
+            throw new Error('serviceAccount.project_id must match firebaseProjectId.')
+          }
           if (!Array.isArray(config.allowedOrigins) || config.allowedOrigins.length === 0 ||
-              config.allowedOrigins.some((origin) => typeof origin !== 'string' || !origin.trim())) {
+              config.allowedOrigins.some((origin) => typeof origin !== 'string' || !origin.trim() || /[\r\n]/.test(origin))) {
             throw new Error('DEPLOY_CONFIG.allowedOrigins must be a non-empty array of origins.')
           }
 
@@ -90,6 +104,9 @@ jobs:
             'backend/functions/.env',
             `CORS_ALLOWED_ORIGINS=${JSON.stringify(config.allowedOrigins.join(','))}\n`,
           )
+          const credentialsPath = path.join(process.env.RUNNER_TEMP, 'firebase-service-account.json')
+          fs.writeFileSync(credentialsPath, JSON.stringify(serviceAccount), { mode: 0o600 })
+          fs.appendFileSync(process.env.GITHUB_ENV, `GOOGLE_APPLICATION_CREDENTIALS=${credentialsPath}\n`)
           fs.appendFileSync(process.env.GITHUB_ENV, `FIREBASE_PROJECT_ID=${config.firebaseProjectId}\n`)
           console.log('Deployment config validated.')
           NODE
@@ -113,8 +130,11 @@ jobs:
         working-directory: backend/functions
 
       - name: Deploy Firebase backend
-        env:
-          DEPLOY_CONFIG: ${{ secrets.DEPLOY_CONFIG }}
+        run: npx firebase-tools deploy --project "$FIREBASE_PROJECT_ID" --only functions,firestore
+
+      - name: Remove Firebase credentials
+        if: always()
         run: |
-          FIREBASE_TOKEN="$(node -p 'JSON.parse(process.env.DEPLOY_CONFIG).firebaseToken')"
-          npx firebase-tools deploy --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_TOKEN" --only functions,firestore
+          if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]]; then
+            rm -f "$GOOGLE_APPLICATION_CREDENTIALS"
+          fi
