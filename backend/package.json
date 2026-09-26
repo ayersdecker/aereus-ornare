@@ -1,0 +1,9 @@
+{
+  "name": "agent-orchestration-backend",
+  "private": true,
+  "scripts": {
+    "install:functions": "npm --prefix functions install",
+    "serve": "npm --prefix functions run serve",
+    "deploy": "npm --prefix functions run deploy"
+  }
+}
