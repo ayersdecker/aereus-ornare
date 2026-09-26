@@ -58,7 +58,7 @@ Add one repository secret named `DEPLOY_CONFIG` in **Settings → Secrets and va
 }
 ```
 
-The workflow validates this secret, creates the frontend and Functions environment files, builds GitHub Pages, and deploys Functions and Firestore rules to the selected Firebase project using Application Default Credentials. Create a Google service-account key for the Firebase project and grant it the IAM permissions needed to deploy Functions and Firestore rules and enable required Google APIs. Keep the entire secret private and rotate the key if it is exposed. `allowedOrigins` entries are origins only, with no path (for example, `https://YOUR_GITHUB_OWNER.github.io`). Also add the GitHub Pages hostname to Firebase Authentication's authorized domains for Google sign-in.
+The workflow validates this secret, creates the frontend and Functions environment files, builds GitHub Pages, configures a 30-day Functions artifact cleanup policy, and deploys Functions and Firestore rules using Application Default Credentials. Create a Google service-account key for the Firebase project and grant it the IAM permissions needed to deploy Functions and Firestore rules, enable required Google APIs, and manage the Artifact Registry cleanup policy. Keep the entire secret private and rotate the key if it is exposed. `allowedOrigins` entries are origins only, with no path (for example, `https://YOUR_GITHUB_OWNER.github.io`). Also add the GitHub Pages hostname to Firebase Authentication's authorized domains for Google sign-in.
 
 Local development still uses `frontend/.env`; `DEPLOY_CONFIG` is for GitHub Actions.
 

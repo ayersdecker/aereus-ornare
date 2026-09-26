@@ -135,6 +135,9 @@ jobs:
         run: npm ci
         working-directory: backend/functions
 
+      - name: Set Functions artifact cleanup policy
+        run: npx firebase-tools functions:artifacts:setpolicy --project "$FIREBASE_PROJECT_ID" --location us-central1 --days 30 --force
+
       - name: Deploy Firebase backend
         run: npx firebase-tools deploy --project "$FIREBASE_PROJECT_ID" --only functions,firestore
 
