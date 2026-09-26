@@ -8,33 +8,41 @@ import DirectiveBuilder from './DirectiveBuilder'
  */
 function Dashboard({ projects, selectedProjectId, onSelectProject, apiBaseUrl }) {
   return (
-    <main className="dashboard-grid">
-      <section className="card">
-        <h2>Projects</h2>
-        <ul>
-          {projects.map((project) => (
-            <li key={project.id}>
-              <button
-                type="button"
-                className={project.id === selectedProjectId ? 'active' : ''}
-                onClick={() => onSelectProject(project.id)}
-              >
-                {project.projectName || project.id}
-              </button>
-            </li>
+    <section className="project-control-layout">
+      <aside className="surface project-list-panel">
+        <div className="eyebrow">YOUR WORKSPACES</div>
+        <div className="project-list-heading"><h2>Projects</h2><span>{String(projects.length).padStart(2, '0')}</span></div>
+        <div className="project-select-list">
+          {projects.map((project, index) => (
+            <button
+              type="button"
+              className={project.id === selectedProjectId ? 'project-select is-selected' : 'project-select'}
+              key={project.id}
+              onClick={() => onSelectProject(project.id)}
+            >
+              <span className={`project-select-index project-index-${index % 4}`}>{String(index + 1).padStart(2, '0')}</span>
+              <span className="project-select-name">{project.projectName || project.id}</span>
+              <span className="project-select-arrow" aria-hidden="true">↗</span>
+            </button>
           ))}
-        </ul>
-      </section>
+        </div>
+        <div className="project-list-foot"><i /> PRIVATE WORKSPACE</div>
+      </aside>
 
-      <AgentManager projectId={selectedProjectId} />
-
-      <section className="card">
-        <h3>Recent Messages</h3>
-        <p>Message history appears here after agents exchange data.</p>
-      </section>
-
-      <DirectiveBuilder projectId={selectedProjectId} apiBaseUrl={apiBaseUrl} />
-    </main>
+      {selectedProjectId ? (
+        <div className="project-tools-grid">
+          <AgentManager projectId={selectedProjectId} />
+          <DirectiveBuilder projectId={selectedProjectId} apiBaseUrl={apiBaseUrl} />
+        </div>
+      ) : (
+        <section className="surface project-empty-state">
+          <span className="empty-mark" aria-hidden="true">↗</span>
+          <div className="eyebrow">READY WHEN YOU ARE</div>
+          <h2>Your first project starts here.</h2>
+          <p>Create a workspace above. It will become the shared context for your agents and directives.</p>
+        </section>
+      )}
+    </section>
   )
 }
 

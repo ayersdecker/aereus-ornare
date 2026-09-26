@@ -1,28 +1,18 @@
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
   signOut as firebaseSignOut,
 } from 'firebase/auth'
 import { auth } from './firebaseConfig'
 
 /**
- * Create a new user account with email and password.
- * @param {string} email
- * @param {string} password
+ * Sign in with a Google account.
  * @returns {Promise<import('firebase/auth').UserCredential>}
  */
-export async function signUpWithEmail(email, password) {
-  return createUserWithEmailAndPassword(auth, email, password)
-}
-
-/**
- * Sign in with email and password.
- * @param {string} email
- * @param {string} password
- * @returns {Promise<import('firebase/auth').UserCredential>}
- */
-export async function signInWithEmail(email, password) {
-  return signInWithEmailAndPassword(auth, email, password)
+export async function signInWithGoogle() {
+  const provider = new GoogleAuthProvider()
+  provider.setCustomParameters({ prompt: 'select_account' })
+  return signInWithPopup(auth, provider)
 }
 
 /**

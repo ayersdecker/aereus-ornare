@@ -14,6 +14,7 @@ function AgentManager({ projectId }) {
   const [agents, setAgents] = useState([])
   const [generatedCode, setGeneratedCode] = useState('')
   const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (!projectId) {
@@ -34,6 +35,7 @@ function AgentManager({ projectId }) {
   }, [projectId])
 
   async function handleGenerateCode() {
+    setError('')
     try {
       const code = await generateAgentCode(projectId)
       setGeneratedCode(code)
@@ -51,27 +53,44 @@ function AgentManager({ projectId }) {
     }
   }
 
+  async function handleCopyCode() {
+    try {
+      await navigator.clipboard.writeText(generatedCode)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setError('Could not copy the code. Select it to copy manually.')
+    }
+  }
+
   return (
-    <section className="card">
-      <h3>Agent Manager</h3>
-      <button type="button" onClick={handleGenerateCode} disabled={!projectId}>
-        Generate connection code
-      </button>
-      {generatedCode ? <p>Latest code: {generatedCode}</p> : null}
+    <section className="surface agent-panel">
+      <div className="tool-panel-heading">
+        <div><div className="eyebrow">CONNECTED SYSTEMS</div><h2>Agents<span className="inline-count">{String(agents.length).padStart(2, '0')}</span></h2></div>
+        <span className="panel-symbol" aria-hidden="true">A</span>
+      </div>
+      <p className="tool-description">Agents are the workers attached to this project context.</p>
 
-      <ul>
+      <div className="agent-list">
         {agents.map((agent) => (
-          <li key={agent.id}>
-            <strong>{agent.agentName || agent.id}</strong>
-            <span> · {agent.status || 'unknown'}</span>
-            <button type="button" onClick={() => handleRemoveAgent(agent.id)}>
-              Remove
-            </button>
-          </li>
+          <div className="agent-row" key={agent.id}>
+            <span className="agent-avatar" aria-hidden="true">{(agent.agentName || agent.id).slice(0, 1).toUpperCase()}</span>
+            <span className="agent-details"><strong>{agent.agentName || agent.id}</strong><small>{agent.id}</small></span>
+            <span className={`status-pill status-${(agent.status || 'unknown').toLowerCase()}`}><i />{agent.status || 'unknown'}</span>
+            <button className="remove-agent" type="button" onClick={() => handleRemoveAgent(agent.id)} aria-label={`Remove ${agent.agentName || agent.id}`} title="Remove agent">×</button>
+          </div>
         ))}
-      </ul>
+        {!agents.length ? <div className="agent-empty"><span aria-hidden="true">◎</span><p>No agents connected</p><small>Generate a connection code to onboard one.</small></div> : null}
+      </div>
 
-      {error ? <p className="error">{error}</p> : null}
+      {generatedCode ? (
+        <div className="connection-code"><span>CONNECTION CODE</span><code>{generatedCode}</code><button type="button" onClick={handleCopyCode} aria-label="Copy connection code" title="Copy connection code">{copied ? 'Copied' : 'Copy'}</button></div>
+      ) : null}
+
+      {error ? <p className="notice notice-error" role="alert">{error}</p> : null}
+      <button className="button-secondary generate-code" type="button" onClick={handleGenerateCode} disabled={!projectId}>
+        <span aria-hidden="true">+</span> Generate connection code
+      </button>
     </section>
   )
 }

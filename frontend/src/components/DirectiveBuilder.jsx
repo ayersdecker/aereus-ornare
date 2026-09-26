@@ -39,12 +39,18 @@ function DirectiveBuilder({ projectId, apiBaseUrl }) {
   }
 
   return (
-    <section className="card">
-      <h3>Directive Builder</h3>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="targetAgent">Target Agent</label>
+    <section className="surface directive-panel">
+      <div className="tool-panel-heading">
+        <div><div className="eyebrow">ROUTE WORK</div><h2>New directive</h2></div>
+        <span className="panel-symbol panel-symbol-directive" aria-hidden="true">D</span>
+      </div>
+      <p className="tool-description">Send a focused instruction to an agent in this project.</p>
+      <form className="directive-form" onSubmit={handleSubmit}>
+        <label htmlFor="targetAgent">Target agent</label>
         <input
+          className="form-input"
           id="targetAgent"
+          placeholder="Agent ID"
           value={targetAgent}
           onChange={(event) => setTargetAgent(event.target.value)}
           required
@@ -52,15 +58,18 @@ function DirectiveBuilder({ projectId, apiBaseUrl }) {
 
         <label htmlFor="instruction">Instruction</label>
         <textarea
+          className="form-input form-textarea"
           id="instruction"
+          placeholder="Describe the work, context, and expected outcome..."
           value={instruction}
           onChange={(event) => setInstruction(event.target.value)}
-          rows={4}
+          rows={5}
           required
         />
 
         <label htmlFor="priority">Priority</label>
         <select
+          className="form-input form-select"
           id="priority"
           value={priority}
           onChange={(event) => setPriority(event.target.value)}
@@ -70,9 +79,9 @@ function DirectiveBuilder({ projectId, apiBaseUrl }) {
           <option value="high">High</option>
         </select>
 
-        <button type="submit">Send directive</button>
+        <button className="button-primary directive-submit" type="submit" disabled={!projectId}>Queue directive <span aria-hidden="true">→</span></button>
       </form>
-      {status ? <p>{status}</p> : null}
+      {status ? <p className={status.startsWith('Directive ') ? 'directive-status is-success' : 'directive-status'} role="status">{status}</p> : null}
     </section>
   )
 }
